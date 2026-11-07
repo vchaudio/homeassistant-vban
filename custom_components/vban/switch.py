@@ -13,7 +13,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from . import VBANConfigEntry, VBANUpdateCoordinator
 from .const import CONF_COMMAND_OFF, CONF_COMMAND_ON, DOMAIN, SUBENTRY_TWO_POSITION
 from .script import async_send_script
-from .entity import VBANBaseEntity
+from .entity import VBANBaseEntity, async_remove_stale_script_entities
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,21 +49,26 @@ async def async_setup_entry(
         entities.append(VBANEQSwitch(coordinator, "bus", bus.index))
 
     async_add_entities(entities)
+    switches: list[VBANScriptSwitch] = []
+    live_ids: set[str] = set()
     for subentry in entry.subentries.values():
         if subentry.subentry_type != SUBENTRY_TWO_POSITION:
             continue
-        async_add_entities(
-            [
-                VBANScriptSwitch(
-                    coordinator,
-                    subentry.subentry_id,
-                    subentry.title,
-                    subentry.data[CONF_COMMAND_ON],
-                    subentry.data[CONF_COMMAND_OFF],
-                )
-            ],
-            config_subentry_id=subentry.subentry_id,
+        live_ids.add(subentry.subentry_id)
+        switches.append(
+            VBANScriptSwitch(
+                coordinator,
+                subentry.subentry_id,
+                subentry.title,
+                subentry.data[CONF_COMMAND_ON],
+                subentry.data[CONF_COMMAND_OFF],
+            )
         )
+    async_remove_stale_script_entities(
+        hass, entry.entry_id, "switch", "two_position_", live_ids
+    )
+    if switches:
+        async_add_entities(switches)
 
 class VBANMuteSwitch(VBANBaseEntity, SwitchEntity):
     """Mute switch for VBAN."""

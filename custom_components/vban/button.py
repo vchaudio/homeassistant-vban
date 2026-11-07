@@ -10,6 +10,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import VBANConfigEntry, VBANUpdateCoordinator
 from .const import CONF_COMMAND, DOMAIN, SUBENTRY_PUSH
+from .entity import async_remove_stale_script_entities
 from .script import async_send_script
 
 _LOGGER = logging.getLogger(__name__)
@@ -27,13 +28,23 @@ async def async_setup_entry(
         VBANRestartButton(coordinator),
         VBANShowWindowButton(coordinator),
     ])
+    buttons: list[VBANScriptButton] = []
+    live_ids: set[str] = set()
     for subentry in entry.subentries.values():
         if subentry.subentry_type != SUBENTRY_PUSH:
             continue
-        async_add_entities(
-            [VBANScriptButton(coordinator, subentry.subentry_id, subentry.title, subentry.data[CONF_COMMAND])],
-            config_subentry_id=subentry.subentry_id,
+        live_ids.add(subentry.subentry_id)
+        buttons.append(
+            VBANScriptButton(
+                coordinator,
+                subentry.subentry_id,
+                subentry.title,
+                subentry.data[CONF_COMMAND],
+            )
         )
+    async_remove_stale_script_entities(hass, entry.entry_id, "button", "push_", live_ids)
+    if buttons:
+        async_add_entities(buttons)
 
 class VBANBaseButton(CoordinatorEntity[VBANUpdateCoordinator], ButtonEntity):
     """Base class for VBAN buttons."""

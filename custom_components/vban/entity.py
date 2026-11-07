@@ -4,6 +4,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import DeviceInfo, EntityCategory
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -82,3 +84,24 @@ class VBANBaseEntity(CoordinatorEntity[VBANUpdateCoordinator]):
     async def async_set_mute(self, mute: bool) -> None:
         """Service: set mute."""
         await self.obj.set_mute(mute)
+
+
+def async_remove_stale_script_entities(
+    hass: HomeAssistant,
+    entry_id: str,
+    domain: str,
+    unique_id_prefix: str,
+    live_subentry_ids: set[str],
+) -> None:
+    """Remove script entities whose subentry no longer exists.
+
+    Push and 2-position controls stay on the VoiceMeeter device. Giving them a
+    config subentry moves that shared device and Home Assistant then deletes
+    the control.
+    """
+    registry = er.async_get(hass)
+    for entity in er.async_entries_for_config_entry(registry, entry_id):
+        if entity.domain != domain or not entity.unique_id.startswith(unique_id_prefix):
+            continue
+        if entity.unique_id.removeprefix(unique_id_prefix) not in live_subentry_ids:
+            registry.async_remove(entity.entity_id)
