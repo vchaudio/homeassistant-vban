@@ -1,7 +1,6 @@
 """Switch platform for VBAN VoiceMeeter."""
 from __future__ import annotations
 
-import asyncio
 import logging
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import STATE_ON
@@ -12,15 +11,8 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import VBANConfigEntry, VBANUpdateCoordinator
-from .const import (
-    CONF_COMMAND,
-    CONF_COMMAND_OFF,
-    CONF_COMMAND_ON,
-    DOMAIN,
-    SUBENTRY_PUSH,
-    SUBENTRY_TWO_POSITION,
-)
-from .script import PUSH_RELEASE_SECONDS, async_send_script, release_script
+from .const import CONF_COMMAND_OFF, CONF_COMMAND_ON, DOMAIN, SUBENTRY_TWO_POSITION
+from .script import async_send_script
 from .entity import VBANBaseEntity, async_remove_stale_script_entities
 
 _LOGGER = logging.getLogger(__name__)
@@ -77,24 +69,7 @@ async def async_setup_entry(
     )
     if switches:
         async_add_entities(switches)
-
-    pushes: list[VBANPushSwitch] = []
-    live_push_ids: set[str] = set()
-    for subentry in entry.subentries.values():
-        if subentry.subentry_type != SUBENTRY_PUSH:
-            continue
-        live_push_ids.add(subentry.subentry_id)
-        pushes.append(
-            VBANPushSwitch(
-                coordinator,
-                subentry.subentry_id,
-                subentry.title,
-                subentry.data[CONF_COMMAND],
-            )
-        )
-    async_remove_stale_script_entities(hass, entry.entry_id, "switch", "push_", live_push_ids)
-    if pushes:
-        async_add_entities(pushes)
+    async_remove_stale_script_entities(hass, entry.entry_id, "switch", "push_", set())
 
 class VBANMuteSwitch(VBANBaseEntity, SwitchEntity):
     """Mute switch for VBAN."""
@@ -249,65 +224,5 @@ class VBANScriptSwitch(CoordinatorEntity[VBANUpdateCoordinator], SwitchEntity, R
 
     async def async_turn_off(self, **kwargs) -> None:
         await async_send_script(self.remote, self._command_off)
-        self._is_on = False
-        self.async_write_ha_state()
-
-
-class VBANPushSwitch(CoordinatorEntity[VBANUpdateCoordinator], SwitchEntity):
-    """Push control. It turns on, sends the script, then returns to off."""
-
-    _attr_icon = "mdi:gesture-tap-button"
-    _attr_has_entity_name = True
-
-    def __init__(
-        self,
-        coordinator: VBANUpdateCoordinator,
-        subentry_id: str,
-        name: str,
-        script: str,
-    ) -> None:
-        super().__init__(coordinator)
-        self._script = script
-        self._is_on = False
-        self._pulsing = False
-        self.remote = coordinator.remote
-        host_id = coordinator.host
-        self._attr_name = name
-        self._attr_unique_id = f"push_{subentry_id}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, host_id)},
-            name=f"VoiceMeeter ({host_id})",
-            manufacturer="VB-Audio",
-            model=self.remote.type.name if self.remote.type else "VoiceMeeter",
-            sw_version=self.remote.version,
-        )
-
-    @property
-    def available(self) -> bool:
-        return self.remote.online and super().available
-
-    @property
-    def is_on(self) -> bool:
-        return self._is_on
-
-    async def async_turn_on(self, **kwargs) -> None:
-        if self._pulsing:
-            return
-        self._pulsing = True
-        self._is_on = True
-        self.async_write_ha_state()
-        try:
-            await async_send_script(self.remote, self._script)
-            await asyncio.sleep(PUSH_RELEASE_SECONDS)
-            if (release := release_script(self._script)) is not None:
-                await async_send_script(self.remote, release)
-        finally:
-            self._is_on = False
-            self._pulsing = False
-            self.async_write_ha_state()
-
-    async def async_turn_off(self, **kwargs) -> None:
-        if (release := release_script(self._script)) is not None:
-            await async_send_script(self.remote, release)
         self._is_on = False
         self.async_write_ha_state()
