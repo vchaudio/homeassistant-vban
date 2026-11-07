@@ -9,11 +9,23 @@
           "media_stream": "Media Stream Name"
         },
         "description": "Enter the connection details for your VoiceMeeter host. The Command Stream name must match the 'VBAN Text Incoming Stream' name configured in VoiceMeeter (default is 'Command1'). The Media Stream name must match a 'VBAN Audio Incoming Stream' name (default is 'Stream1')."
+      },
+      "init": {
+        "data": {
+          "port": "Port",
+          "command_stream": "Command Stream Name",
+          "media_stream": "Media Stream Name",
+          "macro_buttons": "Macro buttons"
+        },
+        "data_description": {
+          "macro_buttons": "Comma-separated indexes, for example 32, 33. Each index adds a push button and a disabled switch."
+        }
       }
     },
     "error": {
       "cannot_connect": "Failed to connect",
       "invalid_auth": "Invalid authentication",
+      "invalid_macro_buttons": "Use whole numbers from 0 to 79, separated by commas.",
       "unknown": "Unexpected error"
     },
     "abort": {
@@ -27,6 +39,12 @@
       },
       "show_window": {
         "name": "Show VM window"
+      },
+      "macro_button": {
+        "name": "Macro button {index}"
+      },
+      "send_command": {
+        "name": "Send command"
       }
     },
     "switch": {
@@ -44,6 +62,9 @@
       },
       "bus_routing": {
         "name": "Route to {bus}"
+      },
+      "macro_switch": {
+        "name": "Macro switch {index}"
       }
     },
     "number": {
@@ -63,6 +84,9 @@
     "text": {
       "label": {
         "name": "Label"
+      },
+      "command": {
+        "name": "Command"
       }
     },
     "media_player": {
@@ -84,6 +108,20 @@
         "command": {
           "name": "Command",
           "description": "The raw command string (e.g., 'Strip[0].Mute=1;')."
+        }
+      }
+    },
+    "press_macro_button": {
+      "name": "Press macro button",
+      "description": "Sends Command.Button[n].State to VoiceMeeter. State on sends 1, off sends 0.",
+      "fields": {
+        "button": {
+          "name": "Button",
+          "description": "Macro button index, the same number as in Command.Button[n]."
+        },
+        "state": {
+          "name": "Pressed",
+          "description": "On sends State=1. Off sends State=0."
         }
       }
     },

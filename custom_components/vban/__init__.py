@@ -24,7 +24,15 @@ from aiovban.asyncio.streams import VBANChatStream
 from .aiovban_compat import apply as _apply_aiovban_compat
 
 _apply_aiovban_compat()
-from .const import DOMAIN, CONF_COMMAND_STREAM, CONF_CHAT_STREAM, DEFAULT_PORT, DEFAULT_COMMAND_STREAM, DEFAULT_CHAT_STREAM
+from .const import (
+    DOMAIN,
+    CONF_COMMAND_STREAM,
+    CONF_CHAT_STREAM,
+    DEFAULT_PORT,
+    DEFAULT_COMMAND_STREAM,
+    DEFAULT_CHAT_STREAM,
+    macro_button_command,
+)
 from .coordinator import VBANUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -132,17 +140,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: VBANConfigEntry) -> bool
 
     # --- Global Service: send_raw_command (Target by Device) ---
 
-    async def handle_send_raw_command(call: ServiceCall) -> None:
-        command: str = call.data["command"]
-        _LOGGER.info("Service: send_raw_command called with %s", command)
-        
+    async def _send_command(call: ServiceCall, command: str) -> None:
         selection = TargetSelection(call.data)
         referenced = async_extract_referenced_entity_ids(hass, selection)
-        
+
         target_remotes = []
-        
+
         if not selection.has_any_target:
-            # Broadcast to ALL entries
             for e in hass.config_entries.async_entries(DOMAIN):
                 if hasattr(e, "runtime_data"):
                     target_remotes.append(e.runtime_data.remote)
@@ -160,8 +164,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: VBANConfigEntry) -> bool
             _LOGGER.warning("No VoiceMeeter hosts found for targeted devices")
             return
 
-        for r in target_remotes:
-            await r.send_command(command)
+        for remote in target_remotes:
+            await remote.send_command(command)
+
+    async def handle_send_raw_command(call: ServiceCall) -> None:
+        command: str = call.data["command"]
+        _LOGGER.info("Service: send_raw_command called with %s", command)
+        await _send_command(call, command)
+
+    async def handle_press_macro_button(call: ServiceCall) -> None:
+        command = macro_button_command(int(call.data["button"]), bool(call.data.get("state", True)))
+        _LOGGER.info("Service: press_macro_button %s", command)
+        await _send_command(call, command)
 
     if not hass.services.has_service(DOMAIN, "send_raw_command"):
         hass.services.async_register(
@@ -174,6 +188,20 @@ async def async_setup_entry(hass: HomeAssistant, entry: VBANConfigEntry) -> bool
                 vol.Optional("device_id"): vol.All(cv.ensure_list, [cv.string]),
                 vol.Optional("area_id"): vol.All(cv.ensure_list, [cv.string]),
             })
+        )
+
+    if not hass.services.has_service(DOMAIN, "press_macro_button"):
+        hass.services.async_register(
+            DOMAIN,
+            "press_macro_button",
+            handle_press_macro_button,
+            schema=vol.Schema({
+                vol.Required("button"): vol.All(vol.Coerce(int), vol.Range(min=0, max=79)),
+                vol.Optional("state", default=True): cv.boolean,
+                vol.Optional("entity_id"): cv.entity_ids,
+                vol.Optional("device_id"): vol.All(cv.ensure_list, [cv.string]),
+                vol.Optional("area_id"): vol.All(cv.ensure_list, [cv.string]),
+            }),
         )
 
     return True

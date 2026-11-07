@@ -9,7 +9,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import VBANConfigEntry, VBANUpdateCoordinator
-from .const import DOMAIN
+from .const import (
+    CONF_MACRO_BUTTONS,
+    DOMAIN,
+    format_vban_command,
+    macro_button_command,
+    parse_macro_buttons,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -22,10 +28,18 @@ async def async_setup_entry(
     data = entry.runtime_data
     coordinator = data.coordinator
 
-    async_add_entities([
+    entities: list[ButtonEntity] = [
         VBANRestartButton(coordinator),
         VBANShowWindowButton(coordinator),
-    ])
+        VBANSendCommandButton(coordinator),
+    ]
+    configured = entry.options.get(
+        CONF_MACRO_BUTTONS, entry.data.get(CONF_MACRO_BUTTONS, "")
+    )
+    for index in parse_macro_buttons(configured):
+        entities.append(VBANMacroButton(coordinator, index))
+
+    async_add_entities(entities)
 
 class VBANBaseButton(CoordinatorEntity[VBANUpdateCoordinator], ButtonEntity):
     """Base class for VBAN buttons."""
@@ -79,3 +93,40 @@ class VBANShowWindowButton(VBANBaseButton):
     async def async_press(self) -> None:
         _LOGGER.info("Showing VoiceMeeter window for %s", self.host_id)
         await self.remote.show()
+
+
+class VBANMacroButton(VBANBaseButton):
+    """Push a VoiceMeeter macro button."""
+
+    _attr_translation_key = "macro_button"
+    _attr_icon = "mdi:gesture-tap-button"
+
+    def __init__(self, coordinator: VBANUpdateCoordinator, index: int) -> None:
+        super().__init__(coordinator)
+        self._index = index
+        self._attr_translation_placeholders = {"index": str(index)}
+        self._attr_unique_id = f"{self.host_id}_macro_button_{index}"
+
+    async def async_press(self) -> None:
+        command = macro_button_command(self._index, True)
+        _LOGGER.info("Sending macro button command %s", command)
+        await self.remote.send_command(command)
+
+
+class VBANSendCommandButton(VBANBaseButton):
+    """Send the text stored in the command entity."""
+
+    _attr_translation_key = "send_command"
+    _attr_icon = "mdi:send"
+
+    def __init__(self, coordinator: VBANUpdateCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{self.host_id}_send_command"
+
+    async def async_press(self) -> None:
+        command = format_vban_command(self.coordinator.custom_command)
+        if not command:
+            _LOGGER.warning("VBAN command text is empty")
+            return
+        _LOGGER.info("Sending custom VBAN command %s", command)
+        await self.remote.send_command(command)

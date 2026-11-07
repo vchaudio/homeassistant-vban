@@ -9,6 +9,26 @@ send_raw_command:
       selector:
         text:
 
+press_macro_button:
+  target:
+    device:
+      integration: vban
+  fields:
+    button:
+      required: true
+      example: 32
+      selector:
+        number:
+          min: 0
+          max: 79
+          mode: box
+    state:
+      required: false
+      example: true
+      default: true
+      selector:
+        boolean:
+
 set_gain:
   target:
     entity:

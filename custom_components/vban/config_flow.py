@@ -13,9 +13,11 @@ from .const import (
     DOMAIN, 
     CONF_COMMAND_STREAM, 
     CONF_MEDIA_STREAM,
+    CONF_MACRO_BUTTONS,
     DEFAULT_PORT, 
     DEFAULT_COMMAND_STREAM,
-    DEFAULT_MEDIA_STREAM
+    DEFAULT_MEDIA_STREAM,
+    parse_macro_buttons,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -63,8 +65,14 @@ class VBANOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         """Manage the VBAN options."""
+        errors: dict[str, str] = {}
         if user_input is not None:
-            return self.async_create_entry(title="", data=user_input)
+            try:
+                parse_macro_buttons(user_input.get(CONF_MACRO_BUTTONS, ""))
+            except ValueError:
+                errors["base"] = "invalid_macro_buttons"
+            else:
+                return self.async_create_entry(title="", data=user_input)
 
         options = {
             vol.Optional(
@@ -87,6 +95,14 @@ class VBANOptionsFlowHandler(config_entries.OptionsFlow):
                     self.config_entry.data.get(CONF_MEDIA_STREAM, DEFAULT_MEDIA_STREAM)
                 ),
             ): str,
+            vol.Optional(
+                CONF_MACRO_BUTTONS,
+                default=self.config_entry.options.get(CONF_MACRO_BUTTONS, ""),
+            ): str,
         }
 
-        return self.async_show_form(step_id="init", data_schema=vol.Schema(options))
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(options),
+            errors=errors,
+        )
