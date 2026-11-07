@@ -40,6 +40,7 @@ class VBANGainNumber(VBANBaseEntity, NumberEntity):
     _attr_native_max_value = 12.0
     _attr_native_step = 0.1
     _attr_native_unit_of_measurement = "dB"
+    _attr_suggested_display_precision = 1
 
     def __init__(self, coordinator: VBANUpdateCoordinator, kind: str, index: int) -> None:
         super().__init__(coordinator, kind, index)
@@ -48,7 +49,10 @@ class VBANGainNumber(VBANBaseEntity, NumberEntity):
 
     @property
     def native_value(self):
-        return self.obj.gain
+        gain = self.obj.gain
+        if gain is None:
+            return None
+        return round(float(gain), 1)
 
     async def async_set_native_value(self, value: float):
         await self.obj.set_gain(value)
