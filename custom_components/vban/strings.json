@@ -42,7 +42,7 @@
       "step": {
         "user": {
           "title": "Push button",
-          "description": "Same as Macro Buttons type Push. Paste the full script, for example SendText(\"vban1\", Strip(0).gain=-6;);",
+          "description": "Same as Macro Buttons type Push. Paste the full script, for example SendText(\"vban1\", Strip(0).gain=-6;);. A press turns the control on, sends the script, and turns it off again. Button State=1 is sent again as State=0.",
           "data": {
             "name": "Name",
             "command": "Request for Button ON / Trigger IN"

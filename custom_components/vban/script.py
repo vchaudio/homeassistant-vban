@@ -9,11 +9,24 @@ _LOGGER = logging.getLogger(__name__)
 
 _CALL = re.compile(r"SendText\s*\(|BEGIN_SECTION\s*\(", re.IGNORECASE)
 _END_SECTION = re.compile(r"END_SECTION", re.IGNORECASE)
+_BUTTON_STATE_ON = re.compile(r"(\.State\s*=\s*)1(?!\d)", re.IGNORECASE)
 _MAX_STREAM_NAME = 16
+PUSH_RELEASE_SECONDS = 0.2
 
 
 class ScriptError(ValueError):
     """A Macro Buttons script could not be parsed."""
+
+
+def release_script(script: str) -> str | None:
+    """Return the push release for a script that sets Button State to 1.
+
+    ``Command.Button[33].State=1`` becomes ``Command.Button[33].State=0``.
+    Scripts that do not set a button state have no release.
+    """
+    if not _BUTTON_STATE_ON.search(script):
+        return None
+    return _BUTTON_STATE_ON.sub(r"\g<1>0", script)
 
 
 def parse_macro_script(script: str) -> list[tuple[str, str]]:

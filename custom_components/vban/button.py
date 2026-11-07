@@ -9,9 +9,8 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import VBANConfigEntry, VBANUpdateCoordinator
-from .const import CONF_COMMAND, DOMAIN, SUBENTRY_PUSH
+from .const import DOMAIN
 from .entity import async_remove_stale_script_entities
-from .script import async_send_script
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,23 +27,9 @@ async def async_setup_entry(
         VBANRestartButton(coordinator),
         VBANShowWindowButton(coordinator),
     ])
-    buttons: list[VBANScriptButton] = []
-    live_ids: set[str] = set()
-    for subentry in entry.subentries.values():
-        if subentry.subentry_type != SUBENTRY_PUSH:
-            continue
-        live_ids.add(subentry.subentry_id)
-        buttons.append(
-            VBANScriptButton(
-                coordinator,
-                subentry.subentry_id,
-                subentry.title,
-                subentry.data[CONF_COMMAND],
-            )
-        )
-    async_remove_stale_script_entities(hass, entry.entry_id, "button", "push_", live_ids)
-    if buttons:
-        async_add_entities(buttons)
+    # Push controls are momentary switches, so drop any button entities left
+    # from the previous version.
+    async_remove_stale_script_entities(hass, entry.entry_id, "button", "push_", set())
 
 class VBANBaseButton(CoordinatorEntity[VBANUpdateCoordinator], ButtonEntity):
     """Base class for VBAN buttons."""
@@ -98,24 +83,3 @@ class VBANShowWindowButton(VBANBaseButton):
     async def async_press(self) -> None:
         _LOGGER.info("Showing VoiceMeeter window for %s", self.host_id)
         await self.remote.show()
-
-
-class VBANScriptButton(VBANBaseButton):
-    """Push button that sends a Macro Buttons script."""
-
-    _attr_icon = "mdi:gesture-tap-button"
-
-    def __init__(
-        self,
-        coordinator: VBANUpdateCoordinator,
-        subentry_id: str,
-        name: str,
-        script: str,
-    ) -> None:
-        super().__init__(coordinator)
-        self._script = script
-        self._attr_name = name
-        self._attr_unique_id = f"push_{subentry_id}"
-
-    async def async_press(self) -> None:
-        await async_send_script(self.remote, self._script)

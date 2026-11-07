@@ -1,6 +1,6 @@
 """Tests for Macro Buttons script parsing."""
 
-from custom_components.vban.script import ScriptError, parse_macro_script
+from custom_components.vban.script import ScriptError, parse_macro_script, release_script
 import pytest
 
 
@@ -36,6 +36,17 @@ def test_begin_section() -> None:
 def test_plain_instruction_uses_configured_stream() -> None:
     """A script without SendText stays one instruction."""
     assert parse_macro_script("Strip(0).gain=-6;") == [("", "Strip(0).gain=-6;")]
+
+
+def test_release_sets_button_state_off() -> None:
+    """A push releases by sending the same script with Button State 0."""
+    script = 'SendText("vban1", Command.Button[33].State=1;);'
+    assert release_script(script) == 'SendText("vban1", Command.Button[33].State=0;);'
+
+
+def test_release_leaves_scripts_without_button_state() -> None:
+    """A gain script has nothing to release."""
+    assert release_script('SendText("vban1", Strip(0).gain=-6;);') is None
 
 
 def test_broken_sendtext_is_rejected() -> None:
