@@ -21,6 +21,9 @@ from homeassistant.helpers.target import async_extract_referenced_entity_ids, Ta
 from aiovban.asyncio import AsyncVBANClient, VoicemeeterRemote
 from aiovban.asyncio.streams import VBANChatStream
 
+from .aiovban_compat import apply as _apply_aiovban_compat
+
+_apply_aiovban_compat()
 from .const import DOMAIN, CONF_COMMAND_STREAM, CONF_CHAT_STREAM, DEFAULT_PORT, DEFAULT_COMMAND_STREAM, DEFAULT_CHAT_STREAM
 from .coordinator import VBANUpdateCoordinator
 

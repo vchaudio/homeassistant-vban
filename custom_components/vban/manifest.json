@@ -1,13 +1,13 @@
 {
   "domain": "vban",
   "name": "VBAN VoiceMeeter",
-  "documentation": "https://github.com/wmbest2/homeassistant-vban",
+  "documentation": "https://github.com/vchaudio/homeassistant-vban",
   "dependencies": [],
-  "codeowners": ["@wmbest2"],
-  "issue_tracker": "https://github.com/wmbest2/homeassistant-vban/issues",
+  "codeowners": ["@wmbest2", "@vchaudio"],
+  "issue_tracker": "https://github.com/vchaudio/homeassistant-vban/issues",
   "config_flow": true,
   "iot_class": "local_push",
-  "version": "0.14.1",
+  "version": "0.14.2",
 
 
 
