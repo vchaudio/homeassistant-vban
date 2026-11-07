@@ -28,9 +28,9 @@ class VBANBaseEntity(CoordinatorEntity[VBANUpdateCoordinator]):
         self.kind = kind
         self.index = index
         
-        # Determine stable host identifier (host_name > IP)
-        data = self.remote.device.connected_application_data
-        self.host_id = data.host_name if data and data.host_name else self.remote.device.address
+        # The configured host stays the device id. The name VoiceMeeter
+        # reports (for example AudioWeaver) would register a second device.
+        self.host_id = coordinator.host
 
     @property
     def device_info(self) -> DeviceInfo:

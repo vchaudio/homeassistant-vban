@@ -133,6 +133,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: VBANConfigEntry) -> bool
         unsub_watchdog=unsub_watchdog,
     )
 
+    _async_drop_duplicate_devices(hass, entry.entry_id, host)
+
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Register update listener
@@ -189,6 +191,26 @@ async def async_setup_entry(hass: HomeAssistant, entry: VBANConfigEntry) -> bool
         )
 
     return True
+
+def _async_drop_duplicate_devices(hass: HomeAssistant, entry_id: str, host_id: str) -> None:
+    """Remove devices registered under the VoiceMeeter computer name.
+
+    Entities belong to the configured host. A second identifier, such as the
+    reported computer name, leaves a duplicate device behind.
+    """
+    registry = dr.async_get(hass)
+    prefix = f"{host_id}_"
+    stale = [
+        device.id
+        for device in dr.async_entries_for_config_entry(registry, entry_id)
+        if (keys := [item for domain, item in device.identifiers if domain == DOMAIN])
+        and not any(key == host_id or key.startswith(prefix) for key in keys)
+    ]
+    for device_id in stale:
+        registry.async_remove_device(device_id)
+    if stale:
+        _LOGGER.info("Removed %s duplicate VBAN device(s) for %s", len(stale), host_id)
+
 
 async def async_reload_entry(hass: HomeAssistant, entry: VBANConfigEntry) -> None:
     """Reload config entry."""

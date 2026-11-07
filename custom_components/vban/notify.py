@@ -37,8 +37,7 @@ class VBANNotifyEntity(NotifyEntity):
         self._entry = entry
         self._chat = entry.runtime_data.chat
         
-        data = entry.runtime_data.remote.device.connected_application_data
-        host_id = data.host_name if data and data.host_name else entry.data["host"]
+        host_id = entry.data["host"]
         
         self._attr_unique_id = f"{entry.entry_id}_chat"
         self._attr_device_info = DeviceInfo(

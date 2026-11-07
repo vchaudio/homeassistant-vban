@@ -89,8 +89,7 @@ class VBANMediaPlayer(MediaPlayerEntity):
         self._media_position_updated_at: dt_util.datetime | None = None
 
         # Link to the main VBAN device
-        data = entry.runtime_data.remote.device.connected_application_data
-        host_id = data.host_name if data and data.host_name else host
+        host_id = host
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, host_id)},
         )

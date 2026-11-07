@@ -217,8 +217,7 @@ class VBANScriptSwitch(CoordinatorEntity[VBANUpdateCoordinator], SwitchEntity, R
         self._command_off = command_off
         self._is_on = False
         self.remote = coordinator.remote
-        data = self.remote.device.connected_application_data
-        host_id = data.host_name if data and data.host_name else self.remote.device.address
+        host_id = coordinator.host
         self._attr_name = name
         self._attr_unique_id = f"two_position_{subentry_id}"
         self._attr_device_info = DeviceInfo(
@@ -272,8 +271,7 @@ class VBANPushSwitch(CoordinatorEntity[VBANUpdateCoordinator], SwitchEntity):
         self._is_on = False
         self._pulsing = False
         self.remote = coordinator.remote
-        data = self.remote.device.connected_application_data
-        host_id = data.host_name if data and data.host_name else self.remote.device.address
+        host_id = coordinator.host
         self._attr_name = name
         self._attr_unique_id = f"push_{subentry_id}"
         self._attr_device_info = DeviceInfo(

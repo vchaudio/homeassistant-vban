@@ -39,9 +39,7 @@ class VBANBaseButton(CoordinatorEntity[VBANUpdateCoordinator], ButtonEntity):
         super().__init__(coordinator)
         self.remote = coordinator.remote
         
-        # Determine stable host identifier (host_name > IP)
-        data = self.remote.device.connected_application_data
-        self.host_id = data.host_name if data and data.host_name else self.remote.device.address
+        self.host_id = coordinator.host
 
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, self.host_id)},
