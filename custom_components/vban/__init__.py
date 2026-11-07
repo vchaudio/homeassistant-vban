@@ -31,8 +31,8 @@ from .const import (
     DEFAULT_PORT,
     DEFAULT_COMMAND_STREAM,
     DEFAULT_CHAT_STREAM,
-    macro_button_command,
 )
+from .script import ScriptError, async_send_script
 from .coordinator import VBANUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -165,16 +165,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: VBANConfigEntry) -> bool
             return
 
         for remote in target_remotes:
-            await remote.send_command(command)
+            try:
+                await async_send_script(remote, command)
+            except ScriptError:
+                _LOGGER.error("Invalid VBAN script: %s", command)
 
     async def handle_send_raw_command(call: ServiceCall) -> None:
         command: str = call.data["command"]
         _LOGGER.info("Service: send_raw_command called with %s", command)
-        await _send_command(call, command)
-
-    async def handle_press_macro_button(call: ServiceCall) -> None:
-        command = macro_button_command(int(call.data["button"]), bool(call.data.get("state", True)))
-        _LOGGER.info("Service: press_macro_button %s", command)
         await _send_command(call, command)
 
     if not hass.services.has_service(DOMAIN, "send_raw_command"):
@@ -188,20 +186,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: VBANConfigEntry) -> bool
                 vol.Optional("device_id"): vol.All(cv.ensure_list, [cv.string]),
                 vol.Optional("area_id"): vol.All(cv.ensure_list, [cv.string]),
             })
-        )
-
-    if not hass.services.has_service(DOMAIN, "press_macro_button"):
-        hass.services.async_register(
-            DOMAIN,
-            "press_macro_button",
-            handle_press_macro_button,
-            schema=vol.Schema({
-                vol.Required("button"): vol.All(vol.Coerce(int), vol.Range(min=0, max=79)),
-                vol.Optional("state", default=True): cv.boolean,
-                vol.Optional("entity_id"): cv.entity_ids,
-                vol.Optional("device_id"): vol.All(cv.ensure_list, [cv.string]),
-                vol.Optional("area_id"): vol.All(cv.ensure_list, [cv.string]),
-            }),
         )
 
     return True

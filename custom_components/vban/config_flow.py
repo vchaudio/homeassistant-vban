@@ -13,12 +13,13 @@ from .const import (
     DOMAIN, 
     CONF_COMMAND_STREAM, 
     CONF_MEDIA_STREAM,
-    CONF_MACRO_BUTTONS,
     DEFAULT_PORT, 
     DEFAULT_COMMAND_STREAM,
     DEFAULT_MEDIA_STREAM,
-    parse_macro_buttons,
+    SUBENTRY_PUSH,
+    SUBENTRY_TWO_POSITION,
 )
+from .macro_flow import PushButtonSubentryFlow, TwoPositionSubentryFlow
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -59,20 +60,23 @@ class VBANConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Get the options flow for this handler."""
         return VBANOptionsFlowHandler()
 
+    @classmethod
+    @callback
+    def async_get_supported_subentry_types(cls, config_entry):
+        """Push buttons and 2-position switches, like Macro Buttons."""
+        return {
+            SUBENTRY_PUSH: PushButtonSubentryFlow,
+            SUBENTRY_TWO_POSITION: TwoPositionSubentryFlow,
+        }
+
 
 class VBANOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle VBAN options."""
 
     async def async_step_init(self, user_input=None):
         """Manage the VBAN options."""
-        errors: dict[str, str] = {}
         if user_input is not None:
-            try:
-                parse_macro_buttons(user_input.get(CONF_MACRO_BUTTONS, ""))
-            except ValueError:
-                errors["base"] = "invalid_macro_buttons"
-            else:
-                return self.async_create_entry(title="", data=user_input)
+            return self.async_create_entry(title="", data=user_input)
 
         options = {
             vol.Optional(
@@ -95,14 +99,6 @@ class VBANOptionsFlowHandler(config_entries.OptionsFlow):
                     self.config_entry.data.get(CONF_MEDIA_STREAM, DEFAULT_MEDIA_STREAM)
                 ),
             ): str,
-            vol.Optional(
-                CONF_MACRO_BUTTONS,
-                default=self.config_entry.options.get(CONF_MACRO_BUTTONS, ""),
-            ): str,
         }
 
-        return self.async_show_form(
-            step_id="init",
-            data_schema=vol.Schema(options),
-            errors=errors,
-        )
+        return self.async_show_form(step_id="init", data_schema=vol.Schema(options))

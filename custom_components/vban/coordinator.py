@@ -30,7 +30,6 @@ class VBANUpdateCoordinator(DataUpdateCoordinator[None]):
         )
         self.remote = remote
         self.host = host
-        self.custom_command = ""
 
     async def _async_setup(self) -> None:
         """Set up the coordinator."""

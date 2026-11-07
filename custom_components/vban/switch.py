@@ -11,7 +11,8 @@ from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import VBANConfigEntry, VBANUpdateCoordinator
-from .const import CONF_MACRO_BUTTONS, DOMAIN, macro_button_command, parse_macro_buttons
+from .const import CONF_COMMAND_OFF, CONF_COMMAND_ON, DOMAIN, SUBENTRY_TWO_POSITION
+from .script import async_send_script
 from .entity import VBANBaseEntity
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,13 +48,22 @@ async def async_setup_entry(
         entities.append(VBANMuteSwitch(coordinator, "bus", bus.index))
         entities.append(VBANEQSwitch(coordinator, "bus", bus.index))
 
-    configured = entry.options.get(
-        CONF_MACRO_BUTTONS, entry.data.get(CONF_MACRO_BUTTONS, "")
-    )
-    for index in parse_macro_buttons(configured):
-        entities.append(VBANMacroSwitch(coordinator, index))
-
     async_add_entities(entities)
+    for subentry in entry.subentries.values():
+        if subentry.subentry_type != SUBENTRY_TWO_POSITION:
+            continue
+        async_add_entities(
+            [
+                VBANScriptSwitch(
+                    coordinator,
+                    subentry.subentry_id,
+                    subentry.title,
+                    subentry.data[CONF_COMMAND_ON],
+                    subentry.data[CONF_COMMAND_OFF],
+                )
+            ],
+            config_subentry_id=subentry.subentry_id,
+        )
 
 class VBANMuteSwitch(VBANBaseEntity, SwitchEntity):
     """Mute switch for VBAN."""
@@ -157,30 +167,32 @@ class VBANRoutingSwitch(VBANBaseEntity, SwitchEntity):
         await self.obj.set_bus_routing(self.bus_id, False)
 
 
-class VBANMacroSwitch(CoordinatorEntity[VBANUpdateCoordinator], SwitchEntity, RestoreEntity):
-    """Set a VoiceMeeter macro button state.
+class VBANScriptSwitch(CoordinatorEntity[VBANUpdateCoordinator], SwitchEntity, RestoreEntity):
+    """2-position control. On and off each send their own script."""
 
-    VoiceMeeter does not report macro button state over VBAN, so the switch
-    remembers the last command sent from Home Assistant.
-    """
-
-    _attr_translation_key = "macro_switch"
     _attr_icon = "mdi:toggle-switch"
-    _attr_entity_registry_enabled_default = False
     _attr_has_entity_name = True
 
-    def __init__(self, coordinator: VBANUpdateCoordinator, index: int) -> None:
+    def __init__(
+        self,
+        coordinator: VBANUpdateCoordinator,
+        subentry_id: str,
+        name: str,
+        command_on: str,
+        command_off: str,
+    ) -> None:
         super().__init__(coordinator)
-        self._index = index
+        self._command_on = command_on
+        self._command_off = command_off
         self._is_on = False
         self.remote = coordinator.remote
         data = self.remote.device.connected_application_data
-        self.host_id = data.host_name if data and data.host_name else self.remote.device.address
-        self._attr_translation_placeholders = {"index": str(index)}
-        self._attr_unique_id = f"{self.host_id}_macro_switch_{index}"
+        host_id = data.host_name if data and data.host_name else self.remote.device.address
+        self._attr_name = name
+        self._attr_unique_id = f"two_position_{subentry_id}"
         self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, self.host_id)},
-            name=f"VoiceMeeter ({self.host_id})",
+            identifiers={(DOMAIN, host_id)},
+            name=f"VoiceMeeter ({host_id})",
             manufacturer="VB-Audio",
             model=self.remote.type.name if self.remote.type else "VoiceMeeter",
             sw_version=self.remote.version,
@@ -201,11 +213,11 @@ class VBANMacroSwitch(CoordinatorEntity[VBANUpdateCoordinator], SwitchEntity, Re
             self._is_on = last_state.state == STATE_ON
 
     async def async_turn_on(self, **kwargs) -> None:
-        await self.remote.send_command(macro_button_command(self._index, True))
+        await async_send_script(self.remote, self._command_on)
         self._is_on = True
         self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs) -> None:
-        await self.remote.send_command(macro_button_command(self._index, False))
+        await async_send_script(self.remote, self._command_off)
         self._is_on = False
         self.async_write_ha_state()

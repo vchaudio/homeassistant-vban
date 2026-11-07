@@ -14,22 +14,79 @@
         "data": {
           "port": "Port",
           "command_stream": "Command Stream Name",
-          "media_stream": "Media Stream Name",
-          "macro_buttons": "Macro buttons"
-        },
-        "data_description": {
-          "macro_buttons": "Comma-separated indexes, for example 32, 33. Each index adds a push button and a disabled switch."
+          "media_stream": "Media Stream Name"
         }
       }
     },
     "error": {
       "cannot_connect": "Failed to connect",
       "invalid_auth": "Invalid authentication",
-      "invalid_macro_buttons": "Use whole numbers from 0 to 79, separated by commas.",
       "unknown": "Unexpected error"
     },
     "abort": {
       "already_configured": "Device is already configured"
+    }
+  },
+  "config_subentries": {
+    "push": {
+      "entry_type": "Push button",
+      "initiate_flow": {
+        "user": "Add push button",
+        "reconfigure": "Reconfigure push button"
+      },
+      "error": {
+        "empty_script": "Enter a command",
+        "invalid_script": "Could not read SendText. Use SendText(\"vban1\", Strip(0).gain=-6;);",
+        "invalid_stream": "The stream name inside SendText must be 1 to 16 characters"
+      },
+      "step": {
+        "user": {
+          "title": "Push button",
+          "description": "Same as Macro Buttons type Push. Paste the full script, for example SendText(\"vban1\", Strip(0).gain=-6;);",
+          "data": {
+            "name": "Name",
+            "command": "Request for Button ON / Trigger IN"
+          }
+        },
+        "reconfigure": {
+          "title": "Push button",
+          "data": {
+            "name": "Name",
+            "command": "Request for Button ON / Trigger IN"
+          }
+        }
+      }
+    },
+    "two_position": {
+      "entry_type": "2 positions",
+      "initiate_flow": {
+        "user": "Add 2-position switch",
+        "reconfigure": "Reconfigure 2-position switch"
+      },
+      "error": {
+        "empty_script": "Enter a command",
+        "invalid_script": "Could not read SendText. Use SendText(\"vban1\", Strip(0).gain=-6;);",
+        "invalid_stream": "The stream name inside SendText must be 1 to 16 characters"
+      },
+      "step": {
+        "user": {
+          "title": "2 positions",
+          "description": "Same as Macro Buttons type 2 Positions. ON runs when the switch turns on, OFF when it turns off.",
+          "data": {
+            "name": "Name",
+            "command_on": "Request for Button ON / Trigger IN",
+            "command_off": "Request for Button OFF / Trigger OUT"
+          }
+        },
+        "reconfigure": {
+          "title": "2 positions",
+          "data": {
+            "name": "Name",
+            "command_on": "Request for Button ON / Trigger IN",
+            "command_off": "Request for Button OFF / Trigger OUT"
+          }
+        }
+      }
     }
   },
   "entity": {
@@ -39,12 +96,6 @@
       },
       "show_window": {
         "name": "Show VM window"
-      },
-      "macro_button": {
-        "name": "Macro button {index}"
-      },
-      "send_command": {
-        "name": "Send command"
       }
     },
     "switch": {
@@ -62,9 +113,6 @@
       },
       "bus_routing": {
         "name": "Route to {bus}"
-      },
-      "macro_switch": {
-        "name": "Macro switch {index}"
       }
     },
     "number": {
@@ -84,9 +132,6 @@
     "text": {
       "label": {
         "name": "Label"
-      },
-      "command": {
-        "name": "Command"
       }
     },
     "media_player": {
@@ -107,21 +152,7 @@
       "fields": {
         "command": {
           "name": "Command",
-          "description": "The raw command string (e.g., 'Strip[0].Mute=1;')."
-        }
-      }
-    },
-    "press_macro_button": {
-      "name": "Press macro button",
-      "description": "Sends Command.Button[n].State to VoiceMeeter. State on sends 1, off sends 0.",
-      "fields": {
-        "button": {
-          "name": "Button",
-          "description": "Macro button index, the same number as in Command.Button[n]."
-        },
-        "state": {
-          "name": "Pressed",
-          "description": "On sends State=1. Off sends State=0."
+          "description": "A Macro Buttons script, for example SendText(\"vban1\", Strip(0).gain=-6;);"
         }
       }
     },
