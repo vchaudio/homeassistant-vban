@@ -10,7 +10,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import VBANConfigEntry, VBANUpdateCoordinator
-from .const import CONF_COMMAND, DOMAIN, SUBENTRY_PUSH
+from .const import CONF_COMMAND, CONF_RELEASE, DOMAIN, SUBENTRY_PUSH
 from .entity import async_remove_stale_script_entities
 from .script import PUSH_RELEASE_SECONDS, async_send_script, release_script
 
@@ -41,6 +41,7 @@ async def async_setup_entry(
                 subentry.subentry_id,
                 subentry.title,
                 subentry.data[CONF_COMMAND],
+                bool(subentry.data.get(CONF_RELEASE, False)),
             )
         )
     async_remove_stale_script_entities(hass, entry.entry_id, "button", "push_", live_ids)
@@ -110,14 +111,16 @@ class VBANScriptButton(VBANBaseButton):
         subentry_id: str,
         name: str,
         script: str,
+        release: bool,
     ) -> None:
         super().__init__(coordinator)
         self._script = script
+        self._release = release
         self._attr_name = name
         self._attr_unique_id = f"push_{subentry_id}"
 
     async def async_press(self) -> None:
         await async_send_script(self.remote, self._script)
-        if (release := release_script(self._script)) is not None:
+        if self._release and (release := release_script(self._script)) is not None:
             await asyncio.sleep(PUSH_RELEASE_SECONDS)
             await async_send_script(self.remote, release)

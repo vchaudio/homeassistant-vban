@@ -13,6 +13,7 @@ CONF_NAME = "name"
 CONF_COMMAND = "command"
 CONF_COMMAND_ON = "command_on"
 CONF_COMMAND_OFF = "command_off"
+CONF_RELEASE = "release"
 
 SUBENTRY_PUSH = "push"
 SUBENTRY_TWO_POSITION = "two_position"

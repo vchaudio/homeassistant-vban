@@ -9,7 +9,13 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigSubentryFlow, SubentryFlowResult
 from homeassistant.helpers.selector import TextSelector, TextSelectorConfig
 
-from .const import CONF_COMMAND, CONF_COMMAND_OFF, CONF_COMMAND_ON, CONF_NAME
+from .const import (
+    CONF_COMMAND,
+    CONF_COMMAND_OFF,
+    CONF_COMMAND_ON,
+    CONF_NAME,
+    CONF_RELEASE,
+)
 from .script import ScriptError, parse_macro_script
 
 _SCRIPT = TextSelector(TextSelectorConfig(multiline=True))
@@ -51,7 +57,10 @@ class PushButtonSubentryFlow(ConfigSubentryFlow):
             errors["base"] = error
         elif user_input is not None:
             title = user_input[CONF_NAME]
-            data = {CONF_COMMAND: user_input[CONF_COMMAND]}
+            data = {
+                CONF_COMMAND: user_input[CONF_COMMAND],
+                CONF_RELEASE: bool(user_input.get(CONF_RELEASE, False)),
+            }
             if reconfigure:
                 return self.async_update_and_abort(
                     self._get_entry(),
@@ -65,6 +74,7 @@ class PushButtonSubentryFlow(ConfigSubentryFlow):
             {
                 vol.Required(CONF_NAME): str,
                 vol.Required(CONF_COMMAND): _SCRIPT,
+                vol.Required(CONF_RELEASE, default=False): bool,
             }
         )
         if reconfigure:
